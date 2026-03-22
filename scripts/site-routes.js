@@ -81,4 +81,9 @@ export const getSitemapEntries = () => [
   ...getCurriculumEntryRoutes(),
 ];
 
-export const getPrerenderRoutes = () => getSitemapEntries().map((entry) => entry.path);
+export const getPrerenderRoutes = () => [
+  ...new Set([
+    ...getSitemapEntries().map((entry) => entry.path),
+    "/admin",
+  ]),
+];

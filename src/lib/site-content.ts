@@ -50,8 +50,224 @@ type SiteContentStateRow = {
 };
 
 const SITE_CONTENT_ROW_ID = 1;
+const SITE_ASSET_PUBLIC_SEGMENT = "/storage/v1/object/public/site-assets/";
 
 const cloneValue = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+const fallbackEventAssetMap = new Map(
+  homeLiveEvents.map((event) => [
+    event.id,
+    {
+      image: event.image,
+      imageAlt: event.imageAlt,
+    },
+  ]),
+);
+
+const fallbackKitAssetMap = new Map(kitCatalog.map((kit) => [kit.id, kit.image]));
+const fallbackSupporterAssetMap = new Map(partnerLogos.map((supporter) => [supporter.id, supporter.src]));
+const fallbackTeamAssetMap = new Map(teamMembers.map((member) => [member.id, member.photo]));
+
+const getWindowOrigin = () => (typeof window !== "undefined" ? window.location.origin : "");
+
+const tryParseUrl = (value: string) => {
+  try {
+    return new URL(value, getWindowOrigin() || "http://localhost");
+  } catch {
+    return null;
+  }
+};
+
+const isSupabaseStorageUrl = (value: string) => value.includes(SITE_ASSET_PUBLIC_SEGMENT);
+
+const isLikelyBundledAssetReference = (value: string) => {
+  if (
+    value.startsWith("/assets/") ||
+    value.startsWith("assets/") ||
+    value.startsWith("/src/assets/") ||
+    value.startsWith("src/assets/")
+  ) {
+    return true;
+  }
+
+  const parsed = tryParseUrl(value);
+  if (!parsed) {
+    return false;
+  }
+
+  return parsed.pathname.startsWith("/assets/") || parsed.pathname.startsWith("/src/assets/");
+};
+
+const shouldReplaceWithFallbackAsset = (value: string | undefined) => {
+  if (!value) {
+    return true;
+  }
+
+  if (isSupabaseStorageUrl(value)) {
+    return false;
+  }
+
+  if (isLikelyBundledAssetReference(value)) {
+    return true;
+  }
+
+  const parsed = tryParseUrl(value);
+  if (!parsed) {
+    return false;
+  }
+
+  const currentOrigin = getWindowOrigin();
+  const isLocalDevHost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  const isBundledAssetPath =
+    parsed.pathname.startsWith("/assets/") || parsed.pathname.startsWith("/src/assets/");
+
+  if (isLocalDevHost && isBundledAssetPath) {
+    return true;
+  }
+
+  if (currentOrigin && parsed.origin !== currentOrigin && isBundledAssetPath) {
+    return true;
+  }
+
+  return false;
+};
+
+const normalizeHomeEvents = (events: HomeEvent[]): HomeEvent[] =>
+  events.map((event) => {
+    const fallbackAsset = fallbackEventAssetMap.get(event.id);
+
+    return {
+      ...event,
+      image: shouldReplaceWithFallbackAsset(event.image) ? fallbackAsset?.image ?? event.image : event.image,
+      imageAlt: event.imageAlt || fallbackAsset?.imageAlt || "",
+    };
+  });
+
+const normalizeKits = (kits: KitCatalogItem[]): KitCatalogItem[] =>
+  kits.map((kit) => ({
+    ...kit,
+    image: shouldReplaceWithFallbackAsset(kit.image) ? fallbackKitAssetMap.get(kit.id) ?? kit.image : kit.image,
+  }));
+
+const normalizeSupporters = (supporters: SupporterLogo[]): SupporterLogo[] =>
+  supporters.map((supporter) => ({
+    ...supporter,
+    src: shouldReplaceWithFallbackAsset(supporter.src)
+      ? fallbackSupporterAssetMap.get(supporter.id) ?? supporter.src
+      : supporter.src,
+  }));
+
+const normalizeTeamMembers = (members: TeamMember[]): TeamMember[] =>
+  members.map((member) => ({
+    ...member,
+    photo: shouldReplaceWithFallbackAsset(member.photo)
+      ? fallbackTeamAssetMap.get(member.id) ?? member.photo
+      : member.photo,
+  }));
+
+const normalizeContentAssets = <K extends SiteContentKey>(
+  key: K,
+  payload: SiteContentMap[K],
+): SiteContentMap[K] => {
+  switch (key) {
+    case "home_events":
+      return normalizeHomeEvents(payload as HomeEvent[]) as SiteContentMap[K];
+    case "kits":
+      return normalizeKits(payload as KitCatalogItem[]) as SiteContentMap[K];
+    case "supporters":
+      return normalizeSupporters(payload as SupporterLogo[]) as SiteContentMap[K];
+    case "team_members":
+      return normalizeTeamMembers(payload as TeamMember[]) as SiteContentMap[K];
+    default:
+      return payload;
+  }
+};
+
+const fileNameFromAssetUrl = (assetUrl: string, fallbackBaseName: string) => {
+  const parsed = tryParseUrl(assetUrl);
+  const rawName = parsed?.pathname.split("/").pop() || fallbackBaseName;
+  return rawName.includes(".") ? rawName : `${rawName}.png`;
+};
+
+const fetchAssetAsFile = async (assetUrl: string, fallbackBaseName: string) => {
+  const response = await fetch(assetUrl);
+  if (!response.ok) {
+    throw new Error(`Could not fetch asset for sync: ${assetUrl}`);
+  }
+
+  const blob = await response.blob();
+  return new File([blob], fileNameFromAssetUrl(assetUrl, fallbackBaseName), {
+    type: blob.type || "application/octet-stream",
+  });
+};
+
+const syncAssetUrlToSupabase = async (
+  assetUrl: string,
+  folder: string,
+  fallbackBaseName: string,
+  cache: Map<string, string>,
+) => {
+  if (!assetUrl || isSupabaseStorageUrl(assetUrl) || !isLikelyBundledAssetReference(assetUrl)) {
+    return assetUrl;
+  }
+
+  if (cache.has(assetUrl)) {
+    return cache.get(assetUrl)!;
+  }
+
+  const file = await fetchAssetAsFile(assetUrl, fallbackBaseName);
+  const publicUrl = await uploadSiteAsset(file, folder);
+  cache.set(assetUrl, publicUrl);
+  return publicUrl;
+};
+
+const syncImageBackedContentToStorage = async <K extends SiteContentKey>(
+  key: K,
+  payload: SiteContentMap[K],
+): Promise<SiteContentMap[K]> => {
+  const cache = new Map<string, string>();
+
+  switch (key) {
+    case "home_events":
+      return (await Promise.all(
+        (payload as HomeEvent[]).map(async (event) => ({
+          ...event,
+          image: event.image
+            ? await syncAssetUrlToSupabase(event.image, "events", event.id || "event-image", cache)
+            : event.image,
+        })),
+      )) as SiteContentMap[K];
+    case "kits":
+      return (await Promise.all(
+        (payload as KitCatalogItem[]).map(async (kit) => ({
+          ...kit,
+          image: kit.image
+            ? await syncAssetUrlToSupabase(kit.image, "kits", kit.id || "kit-image", cache)
+            : kit.image,
+        })),
+      )) as SiteContentMap[K];
+    case "supporters":
+      return (await Promise.all(
+        (payload as SupporterLogo[]).map(async (supporter) => ({
+          ...supporter,
+          src: supporter.src
+            ? await syncAssetUrlToSupabase(supporter.src, "supporters", supporter.id || "supporter-image", cache)
+            : supporter.src,
+        })),
+      )) as SiteContentMap[K];
+    case "team_members":
+      return (await Promise.all(
+        (payload as TeamMember[]).map(async (member) => ({
+          ...member,
+          photo: member.photo
+            ? await syncAssetUrlToSupabase(member.photo, "team", member.id || "team-photo", cache)
+            : member.photo,
+        })),
+      )) as SiteContentMap[K];
+    default:
+      return payload;
+  }
+};
 
 export const fallbackSiteContent: SiteContentMap = {
   home_events: homeLiveEvents,
@@ -84,7 +300,7 @@ export const normalizeSiteContent = <K extends SiteContentKey>(
     return getFallbackSiteContent(key);
   }
 
-  return payload as SiteContentMap[K];
+  return normalizeContentAssets(key, payload as SiteContentMap[K]);
 };
 
 const normalizeSiteContentState = (
@@ -149,11 +365,17 @@ export const saveSiteContent = async <K extends SiteContentKey>(
     throw new Error("Supabase is not configured.");
   }
 
+  const syncedPayload = await syncImageBackedContentToStorage(key, payload);
   const currentContent = await fetchAllSiteContent();
-  const nextPayload = {
+  const nextPayload: SiteContentMap = {
     ...currentContent,
-    [key]: payload,
+    [key]: syncedPayload,
   };
+
+  nextPayload.home_events = await syncImageBackedContentToStorage("home_events", nextPayload.home_events);
+  nextPayload.kits = await syncImageBackedContentToStorage("kits", nextPayload.kits);
+  nextPayload.supporters = await syncImageBackedContentToStorage("supporters", nextPayload.supporters);
+  nextPayload.team_members = await syncImageBackedContentToStorage("team_members", nextPayload.team_members);
 
   const { error } = await supabase.from("site_content_state").upsert(
     {
