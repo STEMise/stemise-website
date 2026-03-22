@@ -10,10 +10,11 @@
   },
   "scripts": {
     "dev": "vite",
+    "generate:build-meta": "node scripts/generate-build-meta.js",
     "generate:sitemap": "node scripts/generate-sitemap.js",
-    "prebuild": "npm run generate:sitemap",
+    "prebuild": "npm run generate:build-meta && npm run generate:sitemap",
     "build": "vite build",
-    "prebuild:dev": "npm run generate:sitemap",
+    "prebuild:dev": "npm run generate:build-meta && npm run generate:sitemap",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"

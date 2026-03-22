@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { ADMIN_BUILD_ID } from "@/generated/build-meta";
 
 const ADMIN_SESSION_MAX_AGE_MS = 30 * 60 * 1000;
 const ADMIN_SESSION_STARTED_AT_KEY = "stemise:admin:started_at";
 const ADMIN_RETURN_TO_KEY = "stemise:admin:return_to";
+const ADMIN_BUILD_ID_KEY = "stemise:admin:build_id";
 
 type AdminAuthContextValue = {
   session: Session | null;
@@ -35,6 +37,16 @@ const storeSessionStartedAt = (timestamp: number) => {
 const clearSessionStartedAt = () => {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(ADMIN_SESSION_STARTED_AT_KEY);
+};
+
+const getStoredAdminBuildId = () => {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(ADMIN_BUILD_ID_KEY);
+};
+
+const storeAdminBuildId = (buildId: string) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(ADMIN_BUILD_ID_KEY, buildId);
 };
 
 const isAdminSessionExpired = () => {
@@ -70,6 +82,7 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
     const syncSession = async (nextSession: Session | null, resetStartedAt = false) => {
       if (!nextSession) {
         clearSessionStartedAt();
+        storeAdminBuildId(ADMIN_BUILD_ID);
         if (!cancelled) {
           setSession(null);
           setIsAdmin(false);
@@ -83,6 +96,16 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
       } else if (!getStoredSessionStartedAt()) {
         storeSessionStartedAt(Date.now());
       }
+
+      const storedBuildId = getStoredAdminBuildId();
+      if (storedBuildId && storedBuildId !== ADMIN_BUILD_ID) {
+        clearSessionStartedAt();
+        storeAdminBuildId(ADMIN_BUILD_ID);
+        await supabase.auth.signOut();
+        return;
+      }
+
+      storeAdminBuildId(ADMIN_BUILD_ID);
 
       if (isAdminSessionExpired()) {
         await supabase.auth.signOut();
