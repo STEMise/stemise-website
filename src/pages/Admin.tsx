@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  GripVertical,
   Loader2,
   LogOut,
   Mail,
@@ -278,6 +279,8 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState<SiteContentKey>("home_events");
   const [availableCountryNames, setAvailableCountryNames] = useState<string[]>([]);
   const [countrySearch, setCountrySearch] = useState("");
+  const [draggedTeamMemberId, setDraggedTeamMemberId] = useState<string | null>(null);
+  const [teamDropTargetId, setTeamDropTargetId] = useState<string | null>(null);
   const [savingSections, setSavingSections] = useState<Record<SiteContentKey, boolean>>({
     home_events: false,
     impact_metrics: false,
@@ -381,6 +384,18 @@ const Admin = () => {
 
   const appendArrayItem = <K extends SiteContentKey>(key: K, item: SiteContentMap[K][number]) => {
     replaceSection(key, [...content[key], item] as SiteContentMap[K]);
+  };
+
+  const moveArrayItem = <K extends SiteContentKey>(key: K, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    const nextItems = [...content[key]];
+    const [movedItem] = nextItems.splice(fromIndex, 1);
+
+    if (!movedItem) return;
+
+    nextItems.splice(toIndex, 0, movedItem);
+    replaceSection(key, nextItems as SiteContentMap[K]);
   };
 
   const toggleImpactCountry = (countryName: string) => {
@@ -1275,11 +1290,59 @@ const Admin = () => {
                 </div>
                 <div className="space-y-6">
                   {content.team_members.map((member, index) => (
-                    <Card key={member.id} className="rounded-[1.8rem] border-2 border-foreground bg-white">
+                    <Card
+                      key={member.id}
+                      draggable
+                      onDragStart={() => {
+                        setDraggedTeamMemberId(member.id);
+                        setTeamDropTargetId(member.id);
+                      }}
+                      onDragOver={(eventValue) => {
+                        eventValue.preventDefault();
+                        if (teamDropTargetId !== member.id) {
+                          setTeamDropTargetId(member.id);
+                        }
+                      }}
+                      onDrop={() => {
+                        if (!draggedTeamMemberId || draggedTeamMemberId === member.id) {
+                          setDraggedTeamMemberId(null);
+                          setTeamDropTargetId(null);
+                          return;
+                        }
+
+                        const fromIndex = content.team_members.findIndex(
+                          (currentMember) => currentMember.id === draggedTeamMemberId,
+                        );
+
+                        if (fromIndex !== -1) {
+                          moveArrayItem("team_members", fromIndex, index);
+                        }
+
+                        setDraggedTeamMemberId(null);
+                        setTeamDropTargetId(null);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedTeamMemberId(null);
+                        setTeamDropTargetId(null);
+                      }}
+                      className={`rounded-[1.8rem] border-2 bg-white transition-colors ${
+                        teamDropTargetId === member.id
+                          ? "border-primary bg-[#fffef4]"
+                          : "border-foreground"
+                      } ${draggedTeamMemberId === member.id ? "opacity-70" : ""}`}
+                    >
                       <CardHeader className="flex flex-row items-start justify-between gap-4">
-                        <div>
-                          <CardTitle className="text-2xl">{member.name || `Team member ${index + 1}`}</CardTitle>
-                          <CardDescription>Update title, bio, headshot, and up to three social links.</CardDescription>
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1 inline-flex items-center gap-2 rounded-full border-2 border-foreground bg-[#fff4a8] px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-foreground">
+                            <GripVertical className="h-4 w-4" />
+                            Drag
+                          </div>
+                          <div>
+                            <CardTitle className="text-2xl">{member.name || `Team member ${index + 1}`}</CardTitle>
+                            <CardDescription>
+                              Update title, bio, headshot, and up to three social links. Drag cards to reorder the team.
+                            </CardDescription>
+                          </div>
                         </div>
                         <Button type="button" variant="outline" onClick={() => removeArrayItem("team_members", index)}>
                           <Trash2 className="h-4 w-4" />
