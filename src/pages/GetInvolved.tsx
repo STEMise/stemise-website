@@ -13,7 +13,7 @@ const actionCards = [
   {
     title: "Become a volunteer",
     description:
-      "Join the youth-led work behind operations, outreach, curriculum, design, and execution.",
+      "Use the volunteer form to join the youth-led work behind operations, outreach, curriculum, design, and execution. Please put your email so we can contact you about further details.",
     href: externalLinks.volunteer,
     label: "Apply to volunteer",
   },
@@ -27,7 +27,7 @@ const actionCards = [
   {
     title: "Partner with STEMise",
     description:
-      "Collaborate on programs, sponsorship, or educational initiatives that expand STEM.",
+      "Use the partnership form to collaborate on programs, sponsorship, or educational initiatives that expand STEM. Please put your email so we can contact you about further details.",
     href: "/contact",
     label: "Start a partnership",
   },

@@ -581,6 +581,16 @@
   }
 }
 
+@media (max-width: 767px) {
+  .hero-floating-shape {
+    display: none !important;
+  }
+
+  .footer-floating-shape {
+    display: none !important;
+  }
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--primary)) transparent;

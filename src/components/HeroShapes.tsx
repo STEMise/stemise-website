@@ -89,7 +89,7 @@ const HeroShapes = ({ variant }: HeroShapesProps) => {
         <div
           key={`${variant}-${index}`}
           className={cn(
-            "absolute pointer-events-none will-change-transform border-2 border-foreground",
+            "hero-floating-shape absolute pointer-events-none will-change-transform border-2 border-foreground",
             motionClasses[index % motionClasses.length],
             shape.className,
           )}

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { submitContactMessage } from "@/lib/formService";
 import { useToast } from "@/hooks/use-toast";
-import joinCommunity from "@/assets/join-community.jpg";
+import contactHero from "@/assets/contact-hero.jpg";
 
 const Contact = () => {
   const [name, setName] = useState("");
@@ -78,9 +78,9 @@ const Contact = () => {
           <div className="container">
             <div className="stagger-grid grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
               <div className="play-card offset-card overflow-hidden rounded-[32px] bg-[#fff1e6]">
-                <img src={joinCommunity} alt="Community support" className="h-48 w-full border-b-2 border-foreground object-cover" />
+                <img src={contactHero} alt="Contact STEMise" className="h-48 w-full border-b-2 border-foreground object-cover" />
                 <div className="p-8">
-                <span className="eyebrow">Response expectations</span>
+                <span className="eyebrow bg-white">Response expectations</span>
                 <h2 className="mt-4 text-3xl font-semibold text-foreground">
                   Keep it short and clear.
                 </h2>

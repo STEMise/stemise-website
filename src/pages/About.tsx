@@ -6,8 +6,8 @@ import { useSiteContentQuery } from "@/lib/site-content";
 import {
   aboutValues,
 } from "@/lib/site-data";
+import earthImage from "@/assets/earth.png";
 import joinCommunity from "@/assets/join-community.jpg";
-import stemKitsShowcase from "@/assets/stem-kits-showcase.jpg";
 
 const LinkedInIcon = ({ className }: { className?: string }) => (
   <svg
@@ -77,9 +77,9 @@ const About = () => {
           <div className="container">
             <div className="stagger-grid grid gap-8 lg:grid-cols-2">
               <div className="play-card offset-card overflow-hidden rounded-[32px] bg-[#cfe0ff]">
-                <img src={stemKitsShowcase} alt="STEM kits" className="h-48 w-full border-b-2 border-foreground object-cover" />
+                <img src={earthImage} alt="Global STEM access" className="h-48 w-full border-b-2 border-foreground object-cover" />
                 <div className="p-8">
-                <span className="eyebrow">Mission</span>
+                <span className="eyebrow bg-white">Mission</span>
                 <h2 className="mt-4 text-3xl font-semibold text-foreground">
                   Bring STEM to life for learners worldwide.
                 </h2>
@@ -93,7 +93,7 @@ const About = () => {
               <div className="play-card offset-card overflow-hidden rounded-[32px] bg-[#fff1e6]">
                 <img src={joinCommunity} alt="Community and collaboration" className="h-48 w-full border-b-2 border-foreground object-cover" />
                 <div className="p-8">
-                <span className="eyebrow">Story</span>
+                <span className="eyebrow bg-white">Story</span>
                 <h2 className="mt-4 text-3xl font-semibold text-foreground">
                   Built by students who wanted better access.
                 </h2>

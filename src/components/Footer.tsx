@@ -65,9 +65,9 @@ const socialLinks = [
 const Footer = () => {
   return (
     <footer className="relative overflow-hidden border-t border-white/10 bg-[#0f1a38] text-white">
-      <div className="footer-shape-a absolute -left-10 top-12 h-28 w-28 rounded-[2rem] bg-[#ddf1b8]" />
-      <div className="footer-shape-b absolute right-16 top-10 h-20 w-20 rounded-full bg-[#dce8ff]" />
-      <div className="footer-shape-c absolute bottom-20 right-[-1.5rem] h-32 w-32 rounded-[2.2rem] bg-[#ffdcc2]" />
+      <div className="footer-floating-shape footer-shape-a absolute -left-10 top-12 h-28 w-28 rounded-[2rem] bg-[#ddf1b8]" />
+      <div className="footer-floating-shape footer-shape-b absolute right-16 top-10 h-20 w-20 rounded-full bg-[#dce8ff]" />
+      <div className="footer-floating-shape footer-shape-c absolute bottom-20 right-[-1.5rem] h-32 w-32 rounded-[2.2rem] bg-[#ffdcc2]" />
 
       <div className="container relative py-14">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_1.8fr]">

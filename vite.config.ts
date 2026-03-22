@@ -7,36 +7,43 @@ import PuppeteerRenderer from "@prerenderer/renderer-puppeteer";
 import { getPrerenderRoutes } from "./scripts/site-routes.js";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 5173,
-    strictPort: true,
-  },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+export default defineConfig(({ mode }) => {
+  const shouldPrerender =
+    process.env.DISABLE_PRERENDER !== "1" && process.env.VERCEL !== "1";
+
+  return {
+    server: {
+      host: "::",
+      port: 5173,
+      strictPort: true,
     },
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-          if (id.includes("@radix-ui") || id.includes("lucide-react")) return "ui";
-          if (id.includes("@tanstack")) return "react-query";
-          return "vendor";
-        },
+    plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
       },
-      plugins: [
-        prerender({
-          routes: getPrerenderRoutes(),
-          renderer: new PuppeteerRenderer({
-            renderAfterTime: 1000,
-          }),
-        }),
-      ],
     },
-  },
-}));
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return;
+            if (id.includes("@radix-ui") || id.includes("lucide-react")) return "ui";
+            if (id.includes("@tanstack")) return "react-query";
+            return "vendor";
+          },
+        },
+        plugins: shouldPrerender
+          ? [
+              prerender({
+                routes: getPrerenderRoutes(),
+                renderer: new PuppeteerRenderer({
+                  renderAfterTime: 1000,
+                }),
+              }),
+            ]
+          : [],
+      },
+    },
+  };
+});
