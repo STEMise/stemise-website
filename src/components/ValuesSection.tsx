@@ -55,7 +55,7 @@ const ValuesSection = () => {
         </div>
 
         <div ref={cardsRef} className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          {values.map((value, index) => <div key={value.title} className={`group relative p-8 rounded-3xl backdrop-blur-sm border border-border/50 text-center transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:shadow-primary/10 ${cardsVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{
+          {values.map((value, index) => <div key={value.title} className={`group relative p-8 rounded-3xl backdrop-blur-sm border border-border/50 text-center transition-all duration-500 hover:scale-[1.03] ${cardsVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{
           backgroundColor: value.cardBg,
           animationDelay: `${index * 0.15}s`
         }}>

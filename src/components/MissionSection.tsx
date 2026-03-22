@@ -35,7 +35,7 @@ const MissionSection = () => {
             </h2>
           </div>
           
-          <div ref={contentRef} className={`bg-gradient-to-br from-card to-secondary/50 p-8 md:p-12 rounded-3xl border border-border/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 ${contentVisible ? 'animate-fade-in-up stagger-1' : 'opacity-0'}`}>
+          <div ref={contentRef} className={`bg-gradient-to-br from-card to-secondary/50 p-8 md:p-12 rounded-3xl border border-border/50 backdrop-blur-sm transition-all duration-500 ${contentVisible ? 'animate-fade-in-up stagger-1' : 'opacity-0'}`}>
             <p className="font-serif text-lg leading-relaxed text-foreground/90 text-center md:text-2xl">
               STEMise is an international, youth-led organization committed to redefining STEM education by focusing on introducing hands-on learning to communities through interactive STEM kits, technology curricula, and educational workshops.
             </p>
@@ -59,7 +59,7 @@ const MissionSection = () => {
           }, {
             value: "Youth-Led",
             label: "By students, for students"
-          }].map((stat, index) => <div key={stat.label} className={`group p-6 bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl border border-border/50 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 ${statsVisible ? 'animate-scale-in' : 'opacity-0'}`} style={{
+          }].map((stat, index) => <div key={stat.label} className={`group p-6 bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl border border-border/50 hover:scale-[1.02] transition-all duration-300 ${statsVisible ? 'animate-scale-in' : 'opacity-0'}`} style={{
             animationDelay: `${(index + 1) * 0.1}s`
           }}>
                 <p className="text-3xl font-semibold text-white">{stat.value}</p>

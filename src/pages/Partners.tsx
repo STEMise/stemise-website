@@ -116,7 +116,7 @@ const Partners = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {benefits.map((benefit, index) => {
                 const Icon = benefit.icon;
-                return <div key={index} className="group p-6 rounded-2xl border border-border/50 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/10 transition-all duration-300" style={{
+                return <div key={index} className="group p-6 rounded-2xl border border-border/50 hover:scale-[1.02] transition-all duration-300" style={{
                 backgroundColor: benefit.cardBg
               }}>
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">

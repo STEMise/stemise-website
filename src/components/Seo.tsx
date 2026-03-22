@@ -49,12 +49,15 @@ const Seo = ({
 
   const breadcrumbLabelMap: Record<string, string> = {
     "/": "Home",
-    "/partners": "Partners",
-    "/donations": "Donations",
-    "/team": "Team",
-    "/courses": "Courses",
+    "/about": "About",
+    "/get-involved": "Get Involved",
+    "/curriculum": "Curriculum",
     "/kits": "Kits",
-    "/contact": "Contact"
+    "/contact": "Contact",
+    "/partners": "Get Involved",
+    "/donations": "Get Involved",
+    "/team": "About",
+    "/courses": "Curriculum",
   };
 
   const getBreadcrumbLabel = () => {

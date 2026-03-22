@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 
 interface PageTransitionProps {
@@ -6,25 +6,25 @@ interface PageTransitionProps {
 }
 
 const PageTransition = ({ children }: PageTransitionProps) => {
-  const [isVisible, setIsVisible] = useState(false);
   const location = useLocation();
-
-  useEffect(() => {
-    setIsVisible(false);
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [location.pathname]);
+  const reduceMotion = useReducedMotion();
 
   return (
-    <div
-      className={`transition-all duration-500 ease-out ${
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-      }`}
-    >
-      {children}
-    </div>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={location.pathname}
+        className="route-shell"
+        initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 28, scale: 0.992 }}
+        animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+        exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -18, scale: 0.992 }}
+        transition={{
+          duration: reduceMotion ? 0 : 0.52,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
   );
 };
 

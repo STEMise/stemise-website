@@ -4,6 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import prerender from "@prerenderer/rollup-plugin";
 import PuppeteerRenderer from "@prerenderer/renderer-puppeteer";
+import { getPrerenderRoutes } from "./scripts/site-routes.js";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -30,15 +31,7 @@ export default defineConfig(({ mode }) => ({
       },
       plugins: [
         prerender({
-          routes: [
-            "/",
-            "/partners",
-            "/donations",
-            "/team",
-            "/courses",
-            "/kits",
-            "/contact",
-          ],
+          routes: getPrerenderRoutes(),
           renderer: new PuppeteerRenderer({
             renderAfterTime: 1000,
           }),

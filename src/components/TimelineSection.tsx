@@ -19,7 +19,7 @@ interface TimelineCardProps {
 }
 
 const TimelineCard = ({ item, isRight }: TimelineCardProps) => (
-    <div className="bg-card p-6 rounded-lg border border-border hover:border-primary/50 transition-colors shadow-sm relative group">
+    <div className="bg-card p-6 rounded-lg border border-border hover:border-primary/50 transition-colors relative group">
         {/* Arrow pointer toward center */}
         <div className={`hidden md:block absolute top-7 w-3 h-3 bg-card rotate-45 border-border transition-colors group-hover:border-primary/50 ${isRight
             ? '-left-[6px] border-l border-b'

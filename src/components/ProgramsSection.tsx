@@ -55,7 +55,7 @@ const ProgramsSection = () => {
         </div>
 
         <div ref={cardsRef} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {programs.map((program, index) => <Card key={program.title} className={`group relative bg-card overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/10 ${cardsVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{
+          {programs.map((program, index) => <Card key={program.title} className={`group relative bg-card overflow-hidden transition-all duration-500 hover:scale-[1.02] ${cardsVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{
           animationDelay: `${index * 0.15}s`
         }}>
               {/* Card inner glow on hover */}
