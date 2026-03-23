@@ -518,10 +518,20 @@ const Admin = () => {
       await queryClient.invalidateQueries({ queryKey: ["site-content"] });
       const nextAllContent = await fetchAllSiteContent();
       setContent(nextAllContent);
-      await triggerRedeployAfterSave("all");
+
+      let redeployWarning: string | null = null;
+
+      try {
+        await triggerRedeployAfterSave("all");
+      } catch (error) {
+        redeployWarning = error instanceof Error ? error.message : "Automatic redeploy failed.";
+      }
+
       toast({
         title: "All content saved",
-        description: "Everything was saved and a fresh redeploy was triggered.",
+        description: redeployWarning
+          ? `Everything was saved to Supabase, but automatic redeploy failed: ${redeployWarning}`
+          : "Everything was saved and a fresh redeploy was triggered.",
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Save failed.";
