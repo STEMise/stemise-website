@@ -13,6 +13,12 @@ import {
   type SupporterLogo,
   type TeamMember,
 } from "@/lib/site-data";
+import {
+  curriculumAgeGroupsFallback,
+  curriculumPagesFallback,
+  type CurriculumAgeGroupContent,
+  type CurriculumPage,
+} from "@/lib/curriculum-content";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export type WorkshopItem = {
@@ -32,7 +38,9 @@ export type SiteContentKey =
   | "kits"
   | "workshops"
   | "supporters"
-  | "team_members";
+  | "team_members"
+  | "curriculum_age_groups"
+  | "curriculum_pages";
 
 export type SiteContentMap = {
   home_events: HomeEvent[];
@@ -42,6 +50,8 @@ export type SiteContentMap = {
   workshops: WorkshopItem[];
   supporters: SupporterLogo[];
   team_members: TeamMember[];
+  curriculum_age_groups: CurriculumAgeGroupContent[];
+  curriculum_pages: CurriculumPage[];
 };
 
 type SiteContentStateRow = {
@@ -263,6 +273,12 @@ const normalizeTeamMembers = (members: TeamMember[]): TeamMember[] =>
       : member.photo,
   }));
 
+const normalizeCurriculumPages = (pages: CurriculumPage[]): CurriculumPage[] =>
+  pages.map((page) => ({
+    ...page,
+    heroImage: shouldReplaceWithFallbackAsset(page.heroImage) ? "" : page.heroImage,
+  }));
+
 const normalizeContentAssets = <K extends SiteContentKey>(
   key: K,
   payload: SiteContentMap[K],
@@ -276,6 +292,8 @@ const normalizeContentAssets = <K extends SiteContentKey>(
       return normalizeSupporters(payload as SupporterLogo[]) as SiteContentMap[K];
     case "team_members":
       return normalizeTeamMembers(payload as TeamMember[]) as SiteContentMap[K];
+    case "curriculum_pages":
+      return normalizeCurriculumPages(payload as CurriculumPage[]) as SiteContentMap[K];
     default:
       return payload;
   }
@@ -362,6 +380,15 @@ const syncImageBackedContentToStorage = async <K extends SiteContentKey>(
             : member.photo,
         })),
       )) as SiteContentMap[K];
+    case "curriculum_pages":
+      return (await Promise.all(
+        (payload as CurriculumPage[]).map(async (page) => ({
+          ...page,
+          heroImage: page.heroImage
+            ? await syncAssetUrlToSupabase(page.heroImage, "curriculum", page.slug || "curriculum-hero", cache)
+            : page.heroImage,
+        })),
+      )) as SiteContentMap[K];
     default:
       return payload;
   }
@@ -375,6 +402,8 @@ export const fallbackSiteContent: SiteContentMap = {
   workshops: [],
   supporters: partnerLogos,
   team_members: teamMembers,
+  curriculum_age_groups: curriculumAgeGroupsFallback,
+  curriculum_pages: curriculumPagesFallback,
 };
 
 export const siteContentLabels: Record<SiteContentKey, string> = {
@@ -385,6 +414,8 @@ export const siteContentLabels: Record<SiteContentKey, string> = {
   workshops: "Workshops",
   supporters: "Supporters",
   team_members: "Team members",
+  curriculum_age_groups: "Curriculum age groups",
+  curriculum_pages: "Curriculum pages",
 };
 
 export const getFallbackSiteContent = <K extends SiteContentKey>(key: K): SiteContentMap[K] =>
@@ -497,6 +528,7 @@ export const saveSiteContent = async <K extends SiteContentKey>(
   nextPayload.kits = await syncImageBackedContentToStorage("kits", nextPayload.kits);
   nextPayload.supporters = await syncImageBackedContentToStorage("supporters", nextPayload.supporters);
   nextPayload.team_members = await syncImageBackedContentToStorage("team_members", nextPayload.team_members);
+  nextPayload.curriculum_pages = await syncImageBackedContentToStorage("curriculum_pages", nextPayload.curriculum_pages);
 
   const { error } = await supabase.from("site_content_state").upsert(
     {

@@ -6,18 +6,19 @@ import Seo from "@/components/Seo";
 import HeroShapes from "@/components/HeroShapes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { curriculumThemeClasses } from "@/lib/curriculum-content";
 import { useSiteContentQuery } from "@/lib/site-content";
-import { curriculumAgeGroups, curriculumThemeClasses } from "@/lib/curriculum-data";
 import { workshopHighlights } from "@/lib/site-data";
 
 const Courses = () => {
   const { data: workshops, isLoading: isLoadingWorkshops } = useSiteContentQuery("workshops");
+  const { data: ageGroups } = useSiteContentQuery("curriculum_age_groups");
 
   return (
     <div className="min-h-screen bg-background">
       <Seo
         title="Curriculum"
-        description="Choose an age path and open STEMise curriculum titles by age group."
+        description="Choose an age path and open editable STEMise curriculum pages."
         pathname="/curriculum"
       />
       <Header />
@@ -25,25 +26,23 @@ const Courses = () => {
         <section className="relative overflow-hidden border-b-2 border-foreground bg-white">
           <HeroShapes variant="curriculum" />
           <div className="container relative py-16 md:py-24">
-            <div className="mx-auto max-w-3xl text-center">
-              <div className="page-hero-copy mx-auto max-w-3xl text-center">
-                <span className="eyebrow">Curriculum</span>
-                <h1 className="display-title mt-6">Explore our curricula.</h1>
-              </div>
+            <div className="mx-auto max-w-4xl text-center">
+              <h1 className="display-title">Explore STEMise curriculum paths.</h1>
+              <p className="lead mx-auto mt-6 max-w-3xl">
+                Choose an age group, open a curriculum, and read through it page by page with bookmarks and guided navigation.
+              </p>
             </div>
           </div>
         </section>
 
         <section id="age-paths" className="section-shell">
           <div className="container">
-            <div className="section-intro section-intro-animate mx-auto text-center">
-              <span className="eyebrow text-2xl font-semibold tracking-tight px-6 py-4 rounded-[2rem] md:text-4xl xl:text-[3.35rem]">
-                Choose an age path
-              </span>
+            <div className="mx-auto max-w-4xl text-center">
+              <h2 className="text-4xl font-semibold text-foreground">Choose an age path</h2>
             </div>
 
             <div className="stagger-grid mt-12 grid gap-6 lg:grid-cols-3">
-              {curriculumAgeGroups.map((group) => {
+              {ageGroups.map((group) => {
                 const theme = curriculumThemeClasses[group.theme];
 
                 return (
@@ -53,11 +52,9 @@ const Courses = () => {
                     className={`play-card offset-card flex min-h-[260px] flex-col justify-between rounded-[2.2rem] border-foreground p-8 ${theme.panel}`}
                   >
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">
-                        Age path
-                      </div>
-                      <h3 className="mt-5 text-4xl font-semibold md:text-5xl">{group.ages}</h3>
-                      <p className="mt-5 max-w-xs text-base leading-7 opacity-90">{group.description}</p>
+                      <h3 className="text-4xl font-semibold md:text-5xl">{group.ages}</h3>
+                      <div className="mt-4 text-xl font-semibold text-foreground">{group.title}</div>
+                      <p className="mt-5 text-base leading-7 opacity-90">{group.subtitle}</p>
                     </div>
                     <div className="mt-8 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.12em]">
                       Open this path
@@ -72,20 +69,16 @@ const Courses = () => {
 
         <section className="section-shell">
           <div className="container">
-            <div className="section-intro section-intro-animate mx-auto max-w-none text-center">
-              <span className="eyebrow text-2xl font-semibold tracking-tight px-6 py-4 rounded-[2rem] md:text-4xl xl:text-[3.35rem]">
-                Workshops
-              </span>
+            <div className="mx-auto max-w-4xl text-center">
+              <h2 className="text-4xl font-semibold text-foreground">Workshops</h2>
             </div>
 
             <div className="stagger-grid mt-12 grid gap-6 lg:grid-cols-3">
-              {workshopHighlights.map((item, index) => {
+              {workshopHighlights.map((item) => {
                 const Icon = item.icon;
-                const borderClass =
-                  "border-foreground";
 
                 return (
-                  <div key={item.title} className={`play-card offset-card rounded-[1.8rem] bg-white p-8 ${borderClass}`}>
+                  <div key={item.title} className="play-card offset-card rounded-[1.8rem] border-foreground bg-white p-8">
                     <div className="icon-bob inline-flex rounded-2xl bg-secondary p-3 text-primary">
                       <Icon className="h-6 w-6" />
                     </div>
@@ -105,45 +98,39 @@ const Courses = () => {
                 </Card>
               ) : workshops.length > 0 ? (
                 <div className="stagger-grid mt-0 grid gap-6 lg:grid-cols-3">
-                  {workshops.map((workshop, index) => {
-                    const borderClass =
-                      "border-foreground";
-
-                    return (
-                      <article key={workshop.id} className={`play-card offset-card rounded-[1.8rem] bg-white p-6 ${borderClass}`}>
-                        <h3 className="text-2xl font-semibold text-foreground">{workshop.title}</h3>
-                        <p className="mt-3 text-sm leading-6 text-muted-foreground">{workshop.description}</p>
-                        <div className="mt-5 space-y-3 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <CalendarDays className="h-4 w-4 text-primary" />
-                            {workshop.date}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock3 className="h-4 w-4 text-primary" />
-                            {workshop.time}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-primary" />
-                            {workshop.location}
-                          </div>
+                  {workshops.map((workshop) => (
+                    <article key={workshop.id} className="play-card offset-card rounded-[1.8rem] border-foreground bg-white p-6">
+                      <h3 className="text-2xl font-semibold text-foreground">{workshop.title}</h3>
+                      <p className="mt-3 text-sm leading-6 text-muted-foreground">{workshop.description}</p>
+                      <div className="mt-5 space-y-3 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-4 w-4 text-primary" />
+                          {workshop.date}
                         </div>
-                        {workshop.registrationLink ? (
-                          <Button asChild className="mt-5 w-full">
-                            <a href={workshop.registrationLink} target="_blank" rel="noopener noreferrer">
-                              Register
-                            </a>
-                          </Button>
-                        ) : null}
-                      </article>
-                    );
-                  })}
+                        <div className="flex items-center gap-2">
+                          <Clock3 className="h-4 w-4 text-primary" />
+                          {workshop.time}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-primary" />
+                          {workshop.location}
+                        </div>
+                      </div>
+                      {workshop.registrationLink ? (
+                        <Button asChild className="mt-5 w-full">
+                          <a href={workshop.registrationLink} target="_blank" rel="noopener noreferrer">
+                            Register
+                          </a>
+                        </Button>
+                      ) : null}
+                    </article>
+                  ))}
                 </div>
               ) : (
                 <Card className="rounded-[1.8rem] border-foreground bg-white">
                   <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
                     <p className="max-w-xl text-muted-foreground">
-                      No workshops are listed right now. The curriculum structure is still ready to
-                      connect to future sessions and class support.
+                      No workshops are listed right now. The curriculum structure is ready for future sessions and class support.
                     </p>
                     <Button variant="outline" asChild>
                       <Link to="/contact">Ask about workshops</Link>

@@ -11,6 +11,8 @@ import {
   Upload,
 } from "lucide-react";
 import { clearStoredAdminSessionState, useAdminAuth } from "@/components/AdminAuthProvider";
+import CurriculumAgeGroupView from "@/components/curriculum/CurriculumAgeGroupView";
+import CurriculumReader from "@/components/curriculum/CurriculumReader";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Seo from "@/components/Seo";
@@ -30,6 +32,12 @@ import {
   type SiteContentMap,
   type WorkshopItem,
 } from "@/lib/site-content";
+import type {
+  CurriculumAgeGroupContent,
+  CurriculumPage,
+  CurriculumResource,
+  CurriculumSectionPage,
+} from "@/lib/curriculum-content";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type {
   HomeEvent,
@@ -113,6 +121,34 @@ const createEmptyTeamMember = (): TeamMember => ({
   },
 });
 
+const createEmptyCurriculumResource = (): CurriculumResource => ({
+  id: makeId("resource"),
+  title: "",
+  description: "",
+  href: "",
+  linkLabel: "",
+});
+
+const createEmptyCurriculumSection = (): CurriculumSectionPage => ({
+  id: makeId("section"),
+  title: "",
+  summary: "",
+  paragraphs: [""],
+  bullets: [],
+  calloutTitle: "",
+  calloutBody: "",
+});
+
+const createEmptyCurriculumPage = (): CurriculumPage => ({
+  slug: makeId("curriculum"),
+  ageGroupSlug: "primary",
+  title: "",
+  subtitle: "",
+  heroImage: "",
+  startReadingLabel: "Start reading",
+  sections: [createEmptyCurriculumSection()],
+});
+
 const sectionOrder: SiteContentKey[] = [
   "home_events",
   "impact_metrics",
@@ -121,6 +157,8 @@ const sectionOrder: SiteContentKey[] = [
   "workshops",
   "supporters",
   "team_members",
+  "curriculum_age_groups",
+  "curriculum_pages",
 ];
 
 const AssetField = ({
@@ -1490,6 +1528,521 @@ const Admin = () => {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              </SectionShell>
+            </TabsContent>
+
+            <TabsContent value="curriculum_age_groups">
+              <SectionShell
+                title="Curriculum age groups"
+                description="Edit the hero copy and resources shown on each curriculum age path page."
+                onReset={() => handleResetSection("curriculum_age_groups")}
+              >
+                <div className="space-y-6">
+                  {content.curriculum_age_groups.map((ageGroup, index) => (
+                    <Card key={ageGroup.slug} className="rounded-[1.8rem] border-2 border-foreground bg-white">
+                      <CardHeader>
+                        <CardTitle className="text-2xl">{ageGroup.title || ageGroup.slug}</CardTitle>
+                        <CardDescription>
+                          This controls the hero and resources section for the `{ageGroup.slug}` curriculum path.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Input
+                            value={ageGroup.title}
+                            onChange={(eventValue) =>
+                              updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                ...current,
+                                title: eventValue.target.value,
+                              }))
+                            }
+                            placeholder="Age group title"
+                          />
+                          <Input
+                            value={ageGroup.ages}
+                            onChange={(eventValue) =>
+                              updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                ...current,
+                                ages: eventValue.target.value,
+                              }))
+                            }
+                            placeholder="Ages"
+                          />
+                          <Input
+                            value={ageGroup.heroButtonLabel}
+                            onChange={(eventValue) =>
+                              updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                ...current,
+                                heroButtonLabel: eventValue.target.value,
+                              }))
+                            }
+                            placeholder="Hero button label"
+                          />
+                          <select
+                            value={ageGroup.theme}
+                            onChange={(eventValue) =>
+                              updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                ...current,
+                                theme: eventValue.target.value as CurriculumAgeGroupContent["theme"],
+                              }))
+                            }
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          >
+                            <option value="orange">Orange</option>
+                            <option value="green">Green</option>
+                            <option value="blue">Blue</option>
+                          </select>
+                        </div>
+
+                        <Textarea
+                          className="min-h-[120px]"
+                          value={ageGroup.subtitle}
+                          onChange={(eventValue) =>
+                            updateArrayItem("curriculum_age_groups", index, (current) => ({
+                              ...current,
+                              subtitle: eventValue.target.value,
+                            }))
+                          }
+                          placeholder="Hero subtitle"
+                        />
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Input
+                            value={ageGroup.resourcesTitle}
+                            onChange={(eventValue) =>
+                              updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                ...current,
+                                resourcesTitle: eventValue.target.value,
+                              }))
+                            }
+                            placeholder="Resources title"
+                          />
+                          <Input
+                            value={ageGroup.resourcesDescription}
+                            onChange={(eventValue) =>
+                              updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                ...current,
+                                resourcesDescription: eventValue.target.value,
+                              }))
+                            }
+                            placeholder="Resources description"
+                          />
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="flex justify-between gap-3">
+                            <div className="text-sm font-semibold text-foreground">Resources</div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() =>
+                                updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                  ...current,
+                                  resources: [...current.resources, createEmptyCurriculumResource()],
+                                }))
+                              }
+                            >
+                              <Plus className="h-4 w-4" />
+                              Add resource
+                            </Button>
+                          </div>
+
+                          {ageGroup.resources.map((resource, resourceIndex) => (
+                            <Card key={resource.id} className="rounded-[1.4rem] border border-border bg-secondary/30">
+                              <CardContent className="grid gap-4 p-4 md:grid-cols-2">
+                                <Input
+                                  value={resource.title}
+                                  onChange={(eventValue) =>
+                                    updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                      ...current,
+                                      resources: current.resources.map((entry, entryIndex) =>
+                                        entryIndex === resourceIndex
+                                          ? { ...entry, title: eventValue.target.value }
+                                          : entry,
+                                      ),
+                                    }))
+                                  }
+                                  placeholder="Resource title"
+                                />
+                                <Input
+                                  value={resource.linkLabel}
+                                  onChange={(eventValue) =>
+                                    updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                      ...current,
+                                      resources: current.resources.map((entry, entryIndex) =>
+                                        entryIndex === resourceIndex
+                                          ? { ...entry, linkLabel: eventValue.target.value }
+                                          : entry,
+                                      ),
+                                    }))
+                                  }
+                                  placeholder="Link label"
+                                />
+                                <Input
+                                  className="md:col-span-2"
+                                  value={resource.href}
+                                  onChange={(eventValue) =>
+                                    updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                      ...current,
+                                      resources: current.resources.map((entry, entryIndex) =>
+                                        entryIndex === resourceIndex
+                                          ? { ...entry, href: eventValue.target.value }
+                                          : entry,
+                                      ),
+                                    }))
+                                  }
+                                  placeholder="Link URL"
+                                />
+                                <Textarea
+                                  className="md:col-span-2 min-h-[100px]"
+                                  value={resource.description}
+                                  onChange={(eventValue) =>
+                                    updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                      ...current,
+                                      resources: current.resources.map((entry, entryIndex) =>
+                                        entryIndex === resourceIndex
+                                          ? { ...entry, description: eventValue.target.value }
+                                          : entry,
+                                      ),
+                                    }))
+                                  }
+                                  placeholder="Resource description"
+                                />
+                                <div className="md:col-span-2 flex justify-end">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() =>
+                                      updateArrayItem("curriculum_age_groups", index, (current) => ({
+                                        ...current,
+                                        resources: current.resources.filter((_, entryIndex) => entryIndex !== resourceIndex),
+                                      }))
+                                    }
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Remove resource
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="text-sm font-semibold text-foreground">Preview</div>
+                          <CurriculumAgeGroupView
+                            ageGroup={ageGroup}
+                            pages={content.curriculum_pages.filter((page) => page.ageGroupSlug === ageGroup.slug)}
+                            previewMode
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </SectionShell>
+            </TabsContent>
+
+            <TabsContent value="curriculum_pages">
+              <SectionShell
+                title="Curriculum pages"
+                description="Build page-by-page curricula under any age group. Each section becomes its own reading page with bookmarks and progress."
+                onReset={() => handleResetSection("curriculum_pages")}
+              >
+                <div className="flex justify-end">
+                  <Button type="button" variant="outline" onClick={() => appendArrayItem("curriculum_pages", createEmptyCurriculumPage())}>
+                    <Plus className="h-4 w-4" />
+                    Add curriculum page
+                  </Button>
+                </div>
+
+                <div className="space-y-6">
+                  {content.curriculum_pages.map((page, index) => {
+                    const pageAgeGroup =
+                      content.curriculum_age_groups.find((group) => group.slug === page.ageGroupSlug) ??
+                      content.curriculum_age_groups[0];
+
+                    return (
+                      <Card key={page.slug} className="rounded-[1.8rem] border-2 border-foreground bg-white">
+                        <CardHeader className="flex flex-row items-start justify-between gap-4">
+                          <div>
+                            <CardTitle className="text-2xl">{page.title || `Curriculum ${index + 1}`}</CardTitle>
+                            <CardDescription>
+                              Page-by-page curriculum reader with editable hero, sections, bookmarks, and progress.
+                            </CardDescription>
+                          </div>
+                          <Button type="button" variant="outline" onClick={() => removeArrayItem("curriculum_pages", index)}>
+                            <Trash2 className="h-4 w-4" />
+                            Remove
+                          </Button>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <Input
+                              value={page.title}
+                              onChange={(eventValue) =>
+                                updateArrayItem("curriculum_pages", index, (current) => ({
+                                  ...current,
+                                  title: eventValue.target.value,
+                                  slug: current.slug || slugify(eventValue.target.value) || makeId("curriculum"),
+                                }))
+                              }
+                              placeholder="Curriculum title"
+                            />
+                            <Input
+                              value={page.slug}
+                              onChange={(eventValue) =>
+                                updateArrayItem("curriculum_pages", index, (current) => ({
+                                  ...current,
+                                  slug: slugify(eventValue.target.value),
+                                }))
+                              }
+                              placeholder="Slug"
+                            />
+                            <select
+                              value={page.ageGroupSlug}
+                              onChange={(eventValue) =>
+                                updateArrayItem("curriculum_pages", index, (current) => ({
+                                  ...current,
+                                  ageGroupSlug: eventValue.target.value as CurriculumPage["ageGroupSlug"],
+                                }))
+                              }
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            >
+                              {content.curriculum_age_groups.map((group) => (
+                                <option key={group.slug} value={group.slug}>
+                                  {group.title}
+                                </option>
+                              ))}
+                            </select>
+                            <Input
+                              value={page.startReadingLabel}
+                              onChange={(eventValue) =>
+                                updateArrayItem("curriculum_pages", index, (current) => ({
+                                  ...current,
+                                  startReadingLabel: eventValue.target.value,
+                                }))
+                              }
+                              placeholder="Start reading button label"
+                            />
+                          </div>
+
+                          <Textarea
+                            className="min-h-[140px]"
+                            value={page.subtitle}
+                            onChange={(eventValue) =>
+                              updateArrayItem("curriculum_pages", index, (current) => ({
+                                ...current,
+                                subtitle: eventValue.target.value,
+                              }))
+                            }
+                            placeholder="Hero subtitle"
+                          />
+
+                          <AssetField
+                            label="Hero image"
+                            value={page.heroImage}
+                            onChange={(value) =>
+                              updateArrayItem("curriculum_pages", index, (current) => ({
+                                ...current,
+                                heroImage: value,
+                              }))
+                            }
+                            uploading={uploadingField === `curriculum-image-${index}`}
+                            onUpload={(file) =>
+                              handleUpload(
+                                `curriculum-image-${index}`,
+                                "curriculum",
+                                (url) =>
+                                  updateArrayItem("curriculum_pages", index, (current) => ({
+                                    ...current,
+                                    heroImage: url,
+                                  })),
+                                file,
+                              )
+                            }
+                          />
+
+                          <div className="space-y-4">
+                            <div className="flex justify-between gap-3">
+                              <div className="text-sm font-semibold text-foreground">Section pages</div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() =>
+                                  updateArrayItem("curriculum_pages", index, (current) => ({
+                                    ...current,
+                                    sections: [...current.sections, createEmptyCurriculumSection()],
+                                  }))
+                                }
+                              >
+                                <Plus className="h-4 w-4" />
+                                Add section page
+                              </Button>
+                            </div>
+
+                            {page.sections.map((section, sectionIndex) => (
+                              <Card key={section.id} className="rounded-[1.4rem] border border-border bg-secondary/30">
+                                <CardContent className="space-y-4 p-4">
+                                  <div className="flex justify-between gap-3">
+                                    <div className="text-sm font-semibold text-foreground">
+                                      Section {sectionIndex + 1}
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() =>
+                                        updateArrayItem("curriculum_pages", index, (current) => ({
+                                          ...current,
+                                          sections: current.sections.filter((_, currentIndex) => currentIndex !== sectionIndex),
+                                        }))
+                                      }
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Remove
+                                    </Button>
+                                  </div>
+
+                                  <div className="grid gap-4 md:grid-cols-2">
+                                    <Input
+                                      value={section.title}
+                                      onChange={(eventValue) =>
+                                        updateArrayItem("curriculum_pages", index, (current) => ({
+                                          ...current,
+                                          sections: current.sections.map((entry, currentIndex) =>
+                                            currentIndex === sectionIndex
+                                              ? {
+                                                  ...entry,
+                                                  title: eventValue.target.value,
+                                                  id: entry.id || slugify(eventValue.target.value) || makeId("section"),
+                                                }
+                                              : entry,
+                                          ),
+                                        }))
+                                      }
+                                      placeholder="Section title"
+                                    />
+                                    <Input
+                                      value={section.id}
+                                      onChange={(eventValue) =>
+                                        updateArrayItem("curriculum_pages", index, (current) => ({
+                                          ...current,
+                                          sections: current.sections.map((entry, currentIndex) =>
+                                            currentIndex === sectionIndex
+                                              ? { ...entry, id: slugify(eventValue.target.value) }
+                                              : entry,
+                                          ),
+                                        }))
+                                      }
+                                      placeholder="Section id"
+                                    />
+                                  </div>
+
+                                  <Textarea
+                                    value={section.summary}
+                                    onChange={(eventValue) =>
+                                      updateArrayItem("curriculum_pages", index, (current) => ({
+                                        ...current,
+                                        sections: current.sections.map((entry, currentIndex) =>
+                                          currentIndex === sectionIndex
+                                            ? { ...entry, summary: eventValue.target.value }
+                                            : entry,
+                                        ),
+                                      }))
+                                    }
+                                    placeholder="Section summary"
+                                  />
+
+                                  <Textarea
+                                    className="min-h-[140px]"
+                                    value={section.paragraphs.join("\n\n")}
+                                    onChange={(eventValue) =>
+                                      updateArrayItem("curriculum_pages", index, (current) => ({
+                                        ...current,
+                                        sections: current.sections.map((entry, currentIndex) =>
+                                          currentIndex === sectionIndex
+                                            ? {
+                                                ...entry,
+                                                paragraphs: eventValue.target.value
+                                                  .split(/\n{2,}/)
+                                                  .map((paragraph) => paragraph.trim())
+                                                  .filter(Boolean),
+                                              }
+                                            : entry,
+                                        ),
+                                      }))
+                                    }
+                                    placeholder="Paragraphs. Separate each paragraph with a blank line."
+                                  />
+
+                                  <Textarea
+                                    className="min-h-[120px]"
+                                    value={section.bullets.join("\n")}
+                                    onChange={(eventValue) =>
+                                      updateArrayItem("curriculum_pages", index, (current) => ({
+                                        ...current,
+                                        sections: current.sections.map((entry, currentIndex) =>
+                                          currentIndex === sectionIndex
+                                            ? {
+                                                ...entry,
+                                                bullets: eventValue.target.value
+                                                  .split("\n")
+                                                  .map((bullet) => bullet.trim())
+                                                  .filter(Boolean),
+                                              }
+                                            : entry,
+                                        ),
+                                      }))
+                                    }
+                                    placeholder="Bullet points. One per line."
+                                  />
+
+                                  <div className="grid gap-4 md:grid-cols-2">
+                                    <Input
+                                      value={section.calloutTitle ?? ""}
+                                      onChange={(eventValue) =>
+                                        updateArrayItem("curriculum_pages", index, (current) => ({
+                                          ...current,
+                                          sections: current.sections.map((entry, currentIndex) =>
+                                            currentIndex === sectionIndex
+                                              ? { ...entry, calloutTitle: eventValue.target.value }
+                                              : entry,
+                                          ),
+                                        }))
+                                      }
+                                      placeholder="Callout title"
+                                    />
+                                    <Input
+                                      value={section.calloutBody ?? ""}
+                                      onChange={(eventValue) =>
+                                        updateArrayItem("curriculum_pages", index, (current) => ({
+                                          ...current,
+                                          sections: current.sections.map((entry, currentIndex) =>
+                                            currentIndex === sectionIndex
+                                              ? { ...entry, calloutBody: eventValue.target.value }
+                                              : entry,
+                                          ),
+                                        }))
+                                      }
+                                      placeholder="Callout body"
+                                    />
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+
+                          {pageAgeGroup ? (
+                            <div className="space-y-4">
+                              <div className="text-sm font-semibold text-foreground">Preview</div>
+                              <CurriculumReader curriculum={page} ageGroup={pageAgeGroup} previewMode />
+                            </div>
+                          ) : null}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </SectionShell>
             </TabsContent>

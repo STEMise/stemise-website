@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const curriculumDataPath = path.resolve(__dirname, "../src/lib/curriculum-data.ts");
+const curriculumContentPath = path.resolve(__dirname, "../src/lib/curriculum-content.ts");
 const appRoutesPath = path.resolve(__dirname, "../src/App.tsx");
 
 const defaultRouteMeta = { changefreq: "weekly", priority: "0.7" };
@@ -21,6 +21,7 @@ const routeMetaOverrides = {
 
 const ageRouteMeta = { changefreq: "weekly", priority: "0.85" };
 const curriculumRouteMeta = { changefreq: "weekly", priority: "0.85" };
+let liveCurriculumRouteCachePromise;
 
 const extractSlugsFromExport = (source, exportName) => {
   const exportStart = source.indexOf(`export const ${exportName}`);
@@ -38,8 +39,51 @@ const extractSlugsFromExport = (source, exportName) => {
   return [...exportBlock.matchAll(/slug:\s*"([^"]+)"/g)].map((match) => match[1]);
 };
 
-const readCurriculumSource = () => fs.readFileSync(curriculumDataPath, "utf8");
+const readCurriculumSource = () => fs.readFileSync(curriculumContentPath, "utf8");
 const readAppSource = () => fs.readFileSync(appRoutesPath, "utf8");
+
+const normalizeSlugList = (values) =>
+  [...new Set((values ?? []).filter((value) => typeof value === "string" && value.trim()))];
+
+const fetchLiveCurriculumRoutes = async () => {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/site_content_state?select=payload&id=eq.1&limit=1`,
+      {
+        headers: {
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${supabaseAnonKey}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const rows = await response.json();
+    const payload = rows?.[0]?.payload ?? {};
+
+    return {
+      ageSlugs: normalizeSlugList(payload.curriculum_age_groups?.map((group) => group?.slug)),
+      entrySlugs: normalizeSlugList(payload.curriculum_pages?.map((page) => page?.slug)),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const getLiveCurriculumRoutes = () => {
+  liveCurriculumRouteCachePromise ??= fetchLiveCurriculumRoutes();
+  return liveCurriculumRouteCachePromise;
+};
 
 export const getStaticAppRoutes = () => {
   const source = readAppSource();
@@ -59,31 +103,39 @@ export const getStaticAppRoutes = () => {
     }));
 };
 
-export const getCurriculumAgeRoutes = () => {
+export const getCurriculumAgeRoutes = async () => {
   const source = readCurriculumSource();
-  return extractSlugsFromExport(source, "curriculumAgeGroups").map((slug) => ({
+  const fallbackAgeSlugs = extractSlugsFromExport(source, "curriculumAgeGroupsFallback");
+  const liveRoutes = await getLiveCurriculumRoutes();
+  const ageSlugs = liveRoutes?.ageSlugs?.length ? liveRoutes.ageSlugs : fallbackAgeSlugs;
+
+  return ageSlugs.map((slug) => ({
     path: `/curriculum/age/${slug}`,
     ...ageRouteMeta,
   }));
 };
 
-export const getCurriculumEntryRoutes = () => {
+export const getCurriculumEntryRoutes = async () => {
   const source = readCurriculumSource();
-  return extractSlugsFromExport(source, "curriculumEntries").map((slug) => ({
+  const fallbackEntrySlugs = extractSlugsFromExport(source, "curriculumPagesFallback");
+  const liveRoutes = await getLiveCurriculumRoutes();
+  const entrySlugs = liveRoutes?.entrySlugs?.length ? liveRoutes.entrySlugs : fallbackEntrySlugs;
+
+  return entrySlugs.map((slug) => ({
     path: `/curriculum/${slug}`,
     ...curriculumRouteMeta,
   }));
 };
 
-export const getSitemapEntries = () => [
+export const getSitemapEntries = async () => [
   ...getStaticAppRoutes(),
-  ...getCurriculumAgeRoutes(),
-  ...getCurriculumEntryRoutes(),
+  ...(await getCurriculumAgeRoutes()),
+  ...(await getCurriculumEntryRoutes()),
 ];
 
-export const getPrerenderRoutes = () => [
+export const getPrerenderRoutes = async () => [
   ...new Set([
-    ...getSitemapEntries().map((entry) => entry.path),
+    ...(await getSitemapEntries()).map((entry) => entry.path),
     "/admin",
   ]),
 ];

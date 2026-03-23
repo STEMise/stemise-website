@@ -17,7 +17,7 @@ const escapeXml = (value) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
 
-const sitemapEntries = getSitemapEntries();
+const sitemapEntries = await getSitemapEntries();
 
 const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <!-- Generated automatically by scripts/generate-sitemap.js -->

@@ -7,9 +7,11 @@ import PuppeteerRenderer from "@prerenderer/renderer-puppeteer";
 import { getPrerenderRoutes } from "./scripts/site-routes.js";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode }) => {
   const shouldPrerender =
     process.env.DISABLE_PRERENDER !== "1" && process.env.VERCEL !== "1";
+
+  const prerenderRoutes = shouldPrerender ? await getPrerenderRoutes() : [];
 
   return {
     server: {
@@ -36,7 +38,7 @@ export default defineConfig(({ mode }) => {
         plugins: shouldPrerender
           ? [
               prerender({
-                routes: getPrerenderRoutes(),
+                routes: prerenderRoutes,
                 renderer: new PuppeteerRenderer({
                   renderAfterTime: 1000,
                 }),
