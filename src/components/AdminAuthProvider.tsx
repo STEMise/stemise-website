@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { ADMIN_BUILD_ID } from "@/generated/build-meta";
 
 const ADMIN_SESSION_MAX_AGE_MS = 30 * 60 * 1000;
-const ADMIN_SESSION_CHECK_TIMEOUT_MS = 5_000;
+const ADMIN_SESSION_CHECK_TIMEOUT_MS = 30_000;
 const ADMIN_SESSION_STARTED_AT_KEY = "stemise:admin:started_at";
 const ADMIN_RETURN_TO_KEY = "stemise:admin:return_to";
 const ADMIN_BUILD_ID_KEY = "stemise:admin:build_id";
