@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { ADMIN_BUILD_ID } from "@/generated/build-meta";
 
 const ADMIN_SESSION_MAX_AGE_MS = 30 * 60 * 1000;
+const ADMIN_SESSION_CHECK_TIMEOUT_MS = 5_000;
 const ADMIN_SESSION_STARTED_AT_KEY = "stemise:admin:started_at";
 const ADMIN_RETURN_TO_KEY = "stemise:admin:return_to";
 const ADMIN_BUILD_ID_KEY = "stemise:admin:build_id";
@@ -71,6 +72,11 @@ export const clearStoredAdminSessionState = () => {
   storeAdminBuildId(ADMIN_BUILD_ID);
 };
 
+const getTimedOutSessionCheck = () =>
+  new Promise<{ timedOut: true }>((resolve) => {
+    window.setTimeout(() => resolve({ timedOut: true }), ADMIN_SESSION_CHECK_TIMEOUT_MS);
+  });
+
 export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -83,6 +89,16 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
     }
 
     let cancelled = false;
+
+    const fallbackToLogin = async () => {
+      clearStoredAdminSessionState();
+      if (!cancelled) {
+        setSession(null);
+        setIsAdmin(false);
+        setIsLoading(false);
+      }
+      await supabase.auth.signOut();
+    };
 
     const syncSession = async (nextSession: Session | null, resetStartedAt = false) => {
       if (!nextSession) {
@@ -117,7 +133,17 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
         return;
       }
 
-      const { data: nextIsAdmin, error } = await supabase.rpc("current_user_is_admin");
+      const adminCheckResult = await Promise.race([
+        supabase.rpc("current_user_is_admin"),
+        getTimedOutSessionCheck(),
+      ]);
+
+      if ("timedOut" in adminCheckResult) {
+        await fallbackToLogin();
+        return;
+      }
+
+      const { data: nextIsAdmin, error } = adminCheckResult;
       if (error) {
         if (!cancelled) {
           setSession(nextSession);
@@ -134,8 +160,17 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
       }
     };
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      await syncSession(data.session ?? null);
+    Promise.race([supabase.auth.getSession(), getTimedOutSessionCheck()]).then(async (result) => {
+      if ("timedOut" in result) {
+        if (!cancelled) {
+          setSession(null);
+          setIsAdmin(false);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      await syncSession(result.data.session ?? null);
     });
 
     const {
