@@ -76,6 +76,31 @@ const STORAGE_UPLOAD_TIMEOUT_MS = 45_000;
 
 const cloneValue = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+const canonicalizeForComparison = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(canonicalizeForComparison);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.keys(value as Record<string, unknown>)
+      .sort()
+      .reduce<Record<string, unknown>>((nextObject, key) => {
+        const nextValue = canonicalizeForComparison((value as Record<string, unknown>)[key]);
+
+        if (typeof nextValue !== "undefined") {
+          nextObject[key] = nextValue;
+        }
+
+        return nextObject;
+      }, {});
+  }
+
+  return value;
+};
+
+const stableSerializeForComparison = (value: unknown) =>
+  JSON.stringify(canonicalizeForComparison(value));
+
 const replaceFileExtension = (fileName: string, nextExtension: string) =>
   fileName.replace(/\.[^.]+$/, "") + nextExtension;
 
@@ -545,7 +570,10 @@ export const saveSiteContent = async <K extends SiteContentKey>(
   const verifiedState = await fetchSiteContentStateRow({ throwOnError: true });
   const verifiedPayload = normalizeSiteContentState(verifiedState?.payload);
 
-  if (JSON.stringify(verifiedPayload[key]) !== JSON.stringify(normalizeContentAssets(key, nextPayload[key]))) {
+  if (
+    stableSerializeForComparison(verifiedPayload[key]) !==
+      stableSerializeForComparison(normalizeContentAssets(key, nextPayload[key]))
+  ) {
     throw new Error("Content save could not be verified from Supabase.");
   }
 };
