@@ -50,10 +50,19 @@ export type HomeEvent = {
   date: string;
   location: string;
   description: string;
+  accentTheme?: "blue" | "orange" | "lime" | "ink";
   href?: string;
   hrefLabel?: string;
   image?: string;
   imageAlt?: string;
+  sponsors?: EventSponsor[];
+};
+
+export type EventSponsor = {
+  id: string;
+  name: string;
+  logo?: string;
+  href?: string;
 };
 
 export type HomeImpactMetric = {
@@ -248,10 +257,12 @@ export const homeLiveEvents: HomeEvent[] = [
     location: "Online event",
     description:
       "A hands-on STEMise session focused on simple robot design, movement, and guided building.",
+    accentTheme: "blue",
     href: "/curriculum",
     hrefLabel: "See curriculum",
     image: curriculaRobotics,
     imageAlt: "Robotics curriculum artwork for Robotics Build Day",
+    sponsors: [],
   },
   {
     id: "kit-request-window",
@@ -261,8 +272,10 @@ export const homeLiveEvents: HomeEvent[] = [
     location: "Worldwide",
     description:
       "Current request period for available STEM kits, depending on stock and shipping feasibility.",
+    accentTheme: "orange",
     href: "/kits",
     hrefLabel: "View kits",
+    sponsors: [],
   },
 ];
 

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Seo from "@/components/Seo";
@@ -14,6 +14,7 @@ import {
   externalLinks,
   fiscalSponsor,
   homeServices,
+  type EventSponsor,
   type HomeEvent,
 } from "@/lib/site-data";
 
@@ -23,57 +24,207 @@ const serviceStyles = [
   "bg-[#ddf1b8]",
 ];
 
-const eventStyles = [
-  "panel-blue border-foreground",
-  "panel-orange border-foreground",
-  "panel-lime border-foreground",
-];
+const eventAccentStyles: Record<NonNullable<HomeEvent["accentTheme"]>, string> = {
+  blue: "panel-blue border-foreground",
+  orange: "panel-orange border-foreground",
+  lime: "panel-lime border-foreground",
+  ink: "panel-ink border-foreground",
+};
 
-const EventCard = ({
-  event,
-  toneClass,
+const SponsorCarousel = ({
+  sponsors,
+  accentTheme,
 }: {
-  event: HomeEvent;
-  toneClass: string;
+  sponsors: EventSponsor[];
+  accentTheme: NonNullable<HomeEvent["accentTheme"]>;
 }) => {
-  const eventImage = event.image ?? stemKitsShowcase;
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const dragState = useRef<{
+    isDragging: boolean;
+    startX: number;
+    startScrollLeft: number;
+  }>({
+    isDragging: false,
+    startX: 0,
+    startScrollLeft: 0,
+  });
+  const [isDragging, setIsDragging] = useState(false);
+
+  if (!sponsors.length) return null;
+
+  const chipClass = accentTheme === "ink" ? "bg-white text-foreground" : "bg-white/88 text-foreground";
+
+  const scrollByAmount = (direction: "left" | "right") => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const cardWidth = Math.min(280, Math.max(220, track.clientWidth * 0.42));
+    track.scrollBy({
+      left: direction === "left" ? -cardWidth : cardWidth,
+      behavior: "smooth",
+    });
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    dragState.current = {
+      isDragging: true,
+      startX: event.clientX,
+      startScrollLeft: track.scrollLeft,
+    };
+    setIsDragging(true);
+    track.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const track = trackRef.current;
+    if (!track || !dragState.current.isDragging) return;
+
+    const deltaX = event.clientX - dragState.current.startX;
+    track.scrollLeft = dragState.current.startScrollLeft - deltaX;
+  };
+
+  const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const track = trackRef.current;
+    dragState.current.isDragging = false;
+    setIsDragging(false);
+    if (track?.hasPointerCapture(event.pointerId)) {
+      track.releasePointerCapture(event.pointerId);
+    }
+  };
 
   return (
-  <article className={`play-card offset-card rounded-[2rem] p-7 ${toneClass}`}>
-    <div className="flex flex-nowrap items-center gap-1.5 whitespace-nowrap sm:gap-2">
-      <span className="rounded-full border-2 border-foreground bg-white px-2.5 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-foreground sm:px-3 sm:text-xs">
-        {event.status}
-      </span>
-      <span className="rounded-full border-2 border-foreground bg-white px-2.5 py-1 text-[0.72rem] font-semibold text-foreground sm:px-3 sm:text-xs">
-        {event.date}
-      </span>
-      <span className="rounded-full border-2 border-foreground bg-white px-2.5 py-1 text-[0.72rem] font-semibold text-foreground sm:px-3 sm:text-xs">
-        {event.location}
-      </span>
-    </div>
-
-    <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_230px] lg:items-end">
-      <div className="min-w-0 lg:flex lg:min-h-[250px] lg:flex-col">
-        <h3 className="text-3xl font-semibold">{event.title}</h3>
-        <p className="mt-4 max-w-xl text-sm leading-7 opacity-90">{event.description}</p>
-        {event.href && event.hrefLabel ? (
-          <Button variant="outline" asChild className="mt-6 lg:mt-auto lg:w-fit">
-            <Link to={event.href}>{event.hrefLabel}</Link>
-          </Button>
-        ) : null}
+    <div className="mt-8 border-t-2 border-foreground/15 pt-6">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">
+          Sponsors
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => scrollByAmount("left")}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-foreground bg-white text-foreground transition-transform hover:-translate-x-0.5"
+            aria-label="Previous sponsors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollByAmount("right")}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-foreground bg-white text-foreground transition-transform hover:translate-x-0.5"
+            aria-label="Next sponsors"
+          >
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
+      <div className="overflow-hidden rounded-[1.6rem] border-2 border-foreground bg-white/30 p-3">
+        <div
+          ref={trackRef}
+          className={`flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onPointerLeave={(event) => {
+            if (dragState.current.isDragging) {
+              endDrag(event);
+            }
+          }}
+        >
+          {sponsors.map((sponsor) => {
+            const content = (
+              <div
+                className={`impact-belt-chip min-h-[88px] min-w-[220px] snap-start justify-center gap-3 rounded-[1.4rem] px-5 py-4 md:min-w-[250px] ${chipClass}`}
+              >
+                {sponsor.logo ? (
+                  <img
+                    src={sponsor.logo}
+                    alt={sponsor.name}
+                    className="h-10 max-w-[130px] object-contain"
+                    draggable={false}
+                  />
+                ) : null}
+                <span className="text-sm font-semibold">{sponsor.name}</span>
+              </div>
+            );
 
-      <div className="hidden self-end lg:block">
-        <div className="h-[250px] overflow-hidden rounded-[1.5rem] border-2 border-foreground bg-white">
-          <img
-            src={eventImage}
-            alt={event.imageAlt ?? event.title}
-            className="h-full w-full object-cover"
-          />
+            return sponsor.href ? (
+              <a
+                key={sponsor.id}
+                href={sponsor.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0"
+                draggable={false}
+              >
+                {content}
+              </a>
+            ) : (
+              <div key={sponsor.id} className="shrink-0" draggable={false}>
+                {content}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
-  </article>
+  );
+};
+
+const EventCard = ({
+  event,
+}: {
+  event: HomeEvent;
+}) => {
+  const eventImage = event.image ?? stemKitsShowcase;
+  const accentTheme = event.accentTheme ?? "blue";
+  const toneClass = eventAccentStyles[accentTheme];
+
+  return (
+    <article className={`play-card offset-card overflow-hidden rounded-[2.3rem] ${toneClass}`}>
+      <div className="grid gap-0 xl:grid-cols-[minmax(0,1.15fr)_420px]">
+        <div className="p-7 md:p-9">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border-2 border-foreground bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
+              {event.status}
+            </span>
+            <span className="rounded-full border-2 border-foreground bg-white px-3 py-1 text-xs font-semibold text-foreground">
+              {event.date}
+            </span>
+            <span className="rounded-full border-2 border-foreground bg-white px-3 py-1 text-xs font-semibold text-foreground">
+              {event.location}
+            </span>
+          </div>
+
+          <div className="mt-6 max-w-3xl">
+            <h3 className="text-4xl font-semibold md:text-5xl">{event.title}</h3>
+            <p className="mt-5 text-base leading-8 opacity-90 md:text-lg">
+              {event.description}
+            </p>
+            {event.href && event.hrefLabel ? (
+              <Button variant="outline" asChild className="mt-7 w-fit bg-white">
+                <Link to={event.href}>{event.hrefLabel}</Link>
+              </Button>
+            ) : null}
+          </div>
+
+          <SponsorCarousel sponsors={event.sponsors ?? []} accentTheme={accentTheme} />
+        </div>
+
+        <div className="border-t-2 border-foreground xl:border-l-2 xl:border-t-0">
+          <div className="h-full min-h-[280px] overflow-hidden bg-white xl:min-h-[100%]">
+            <img
+              src={eventImage}
+              alt={event.imageAlt ?? event.title}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        </div>
+      </div>
+    </article>
   );
 };
 
@@ -90,8 +241,6 @@ const DiscordGlyph = () => (
 
 const Index = () => {
   const { data: liveEvents } = useSiteContentQuery("home_events");
-  const [eventIndex, setEventIndex] = useState(0);
-  const useEventsCarousel = liveEvents.length > 2;
 
   return (
     <div className="min-h-screen bg-background">
@@ -183,64 +332,11 @@ const Index = () => {
               </div>
             </div>
 
-            {useEventsCarousel ? (
-              <div data-scroll-reveal className="relative mt-12">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="absolute left-0 top-1/2 z-10 -translate-y-1/2 md:-left-8"
-                  onClick={() =>
-                    setEventIndex((current) =>
-                      current === 0 ? liveEvents.length - 1 : current - 1,
-                    )
-                  }
-                  aria-label="Previous event"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-
-                <div className="overflow-hidden px-12 md:px-10">
-                  <div
-                    className="flex transition-transform duration-500 ease-out"
-                    style={{ transform: `translateX(-${eventIndex * 100}%)` }}
-                  >
-                    {liveEvents.map((event, index) => (
-                      <EventCard
-                        key={event.id}
-                        event={event}
-                        toneClass={`w-full shrink-0 ${eventStyles[index % eventStyles.length]}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="absolute right-0 top-1/2 z-10 -translate-y-1/2 md:-right-8"
-                  onClick={() =>
-                    setEventIndex((current) =>
-                      current === liveEvents.length - 1 ? 0 : current + 1,
-                    )
-                  }
-                  aria-label="Next event"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
-              </div>
-            ) : (
-              <div className="stagger-grid mt-12 grid gap-6 lg:grid-cols-2">
-                {liveEvents.map((event, index) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    toneClass={eventStyles[index % eventStyles.length]}
-                  />
-                ))}
-              </div>
-            )}
+            <div data-scroll-reveal className="stagger-stack mt-12 space-y-7">
+              {liveEvents.map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))}
+            </div>
           </div>
         </section>
 

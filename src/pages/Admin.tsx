@@ -41,6 +41,7 @@ import type {
 } from "@/lib/curriculum-content";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type {
+  EventSponsor,
   HomeEvent,
   HomeImpactCountry,
   HomeImpactMetric,
@@ -67,10 +68,19 @@ const createEmptyEvent = (): HomeEvent => ({
   date: "",
   location: "",
   description: "",
+  accentTheme: "blue",
   href: "",
   hrefLabel: "",
   image: "",
   imageAlt: "",
+  sponsors: [],
+});
+
+const createEmptyEventSponsor = (): EventSponsor => ({
+  id: makeId("event-sponsor"),
+  name: "",
+  logo: "",
+  href: "",
 });
 
 const createEmptyMetric = (): HomeImpactMetric => ({
@@ -770,7 +780,7 @@ const Admin = () => {
             <TabsContent value="home_events">
               <SectionShell
                 title="Home events"
-                description="Add or edit the cards shown in the homepage events section. Every event follows the same card template."
+                description="Edit the long-form homepage event sections, including per-event accent styling, images, and sponsor conveyor rows."
                 onReset={() => handleResetSection("home_events")}
               >
                 <div className="flex justify-end">
@@ -782,20 +792,20 @@ const Admin = () => {
                 <div className="space-y-6">
                   {content.home_events.map((event, index) => (
                     <Card key={event.id} className="rounded-[1.8rem] border-2 border-foreground bg-white">
-                      <CardHeader className="flex flex-row items-start justify-between gap-4">
-                        <div>
-                          <CardTitle className="text-2xl">{event.title || `Event ${index + 1}`}</CardTitle>
-                          <CardDescription>Edit the homepage event card content and image.</CardDescription>
-                        </div>
+                        <CardHeader className="flex flex-row items-start justify-between gap-4">
+                          <div>
+                            <CardTitle className="text-2xl">{event.title || `Event ${index + 1}`}</CardTitle>
+                            <CardDescription>Edit the homepage event section, accent styling, and sponsor row.</CardDescription>
+                          </div>
                         <Button type="button" variant="outline" onClick={() => removeArrayItem("home_events", index)}>
                           <Trash2 className="h-4 w-4" />
                           Remove
                         </Button>
                       </CardHeader>
-                      <CardContent className="grid gap-6 xl:grid-cols-[1fr_360px]">
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <Input
-                            value={event.title}
+                        <CardContent className="grid gap-6 xl:grid-cols-[1fr_360px]">
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <Input
+                              value={event.title}
                             onChange={(eventValue) =>
                               updateArrayItem("home_events", index, (current) => ({
                                 ...current,
@@ -833,11 +843,26 @@ const Admin = () => {
                                 location: eventValue.target.value,
                               }))
                             }
-                            placeholder="Location"
-                          />
-                          <Input
-                            value={event.href ?? ""}
-                            onChange={(eventValue) =>
+                              placeholder="Location"
+                            />
+                            <select
+                              value={event.accentTheme ?? "blue"}
+                              onChange={(eventValue) =>
+                                updateArrayItem("home_events", index, (current) => ({
+                                  ...current,
+                                  accentTheme: eventValue.target.value as HomeEvent["accentTheme"],
+                                }))
+                              }
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            >
+                              <option value="blue">Blue accent</option>
+                              <option value="orange">Orange accent</option>
+                              <option value="lime">Lime accent</option>
+                              <option value="ink">Ink accent</option>
+                            </select>
+                            <Input
+                              value={event.href ?? ""}
+                              onChange={(eventValue) =>
                               updateArrayItem("home_events", index, (current) => ({
                                 ...current,
                                 href: eventValue.target.value,
@@ -879,8 +904,8 @@ const Admin = () => {
                           />
                         </div>
 
-                        <AssetField
-                          label="Event image"
+                          <AssetField
+                            label="Event image"
                           value={event.image ?? ""}
                           onChange={(value) =>
                             updateArrayItem("home_events", index, (current) => ({
@@ -900,11 +925,129 @@ const Admin = () => {
                                 })),
                               file,
                             )
-                          }
-                        />
-                      </CardContent>
-                    </Card>
-                  ))}
+                            }
+                          />
+
+                          <div className="xl:col-span-2 space-y-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <div className="text-sm font-semibold text-foreground">Sponsors</div>
+                                <div className="text-sm text-muted-foreground">
+                                  Add sponsor logos for the conveyor row shown inside this event.
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() =>
+                                  updateArrayItem("home_events", index, (current) => ({
+                                    ...current,
+                                    sponsors: [...(current.sponsors ?? []), createEmptyEventSponsor()],
+                                  }))
+                                }
+                              >
+                                <Plus className="h-4 w-4" />
+                                Add sponsor
+                              </Button>
+                            </div>
+
+                            {(event.sponsors ?? []).length ? (
+                              <div className="space-y-4">
+                                {(event.sponsors ?? []).map((sponsor, sponsorIndex) => (
+                                  <Card key={sponsor.id} className="rounded-[1.4rem] border border-border bg-secondary/30">
+                                    <CardContent className="grid gap-4 p-4 lg:grid-cols-[1fr_320px]">
+                                      <div className="grid gap-4 md:grid-cols-2">
+                                        <Input
+                                          value={sponsor.name}
+                                          onChange={(eventValue) =>
+                                            updateArrayItem("home_events", index, (current) => ({
+                                              ...current,
+                                              sponsors: (current.sponsors ?? []).map((entry, entryIndex) =>
+                                                entryIndex === sponsorIndex
+                                                  ? { ...entry, name: eventValue.target.value }
+                                                  : entry,
+                                              ),
+                                            }))
+                                          }
+                                          placeholder="Sponsor name"
+                                        />
+                                        <Input
+                                          value={sponsor.href ?? ""}
+                                          onChange={(eventValue) =>
+                                            updateArrayItem("home_events", index, (current) => ({
+                                              ...current,
+                                              sponsors: (current.sponsors ?? []).map((entry, entryIndex) =>
+                                                entryIndex === sponsorIndex
+                                                  ? { ...entry, href: eventValue.target.value }
+                                                  : entry,
+                                              ),
+                                            }))
+                                          }
+                                          placeholder="Sponsor link"
+                                        />
+                                      </div>
+
+                                      <div className="space-y-3">
+                                        <AssetField
+                                          label="Sponsor logo"
+                                          value={sponsor.logo ?? ""}
+                                          onChange={(value) =>
+                                            updateArrayItem("home_events", index, (current) => ({
+                                              ...current,
+                                              sponsors: (current.sponsors ?? []).map((entry, entryIndex) =>
+                                                entryIndex === sponsorIndex
+                                                  ? { ...entry, logo: value }
+                                                  : entry,
+                                              ),
+                                            }))
+                                          }
+                                          uploading={uploadingField === `event-sponsor-${index}-${sponsorIndex}`}
+                                          onUpload={(file) =>
+                                            handleUpload(
+                                              `event-sponsor-${index}-${sponsorIndex}`,
+                                              "events/sponsors",
+                                              (url) =>
+                                                updateArrayItem("home_events", index, (current) => ({
+                                                  ...current,
+                                                  sponsors: (current.sponsors ?? []).map((entry, entryIndex) =>
+                                                    entryIndex === sponsorIndex
+                                                      ? { ...entry, logo: url }
+                                                      : entry,
+                                                  ),
+                                                })),
+                                              file,
+                                            )
+                                          }
+                                        />
+                                        <div className="flex justify-end">
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() =>
+                                              updateArrayItem("home_events", index, (current) => ({
+                                                ...current,
+                                                sponsors: (current.sponsors ?? []).filter((_, entryIndex) => entryIndex !== sponsorIndex),
+                                              }))
+                                            }
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                            Remove sponsor
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="rounded-[1.4rem] border border-dashed border-border bg-secondary/30 px-4 py-5 text-sm text-muted-foreground">
+                                No sponsors added yet for this event.
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                 </div>
               </SectionShell>
             </TabsContent>

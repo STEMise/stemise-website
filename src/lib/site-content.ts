@@ -271,8 +271,12 @@ const normalizeHomeEvents = (events: HomeEvent[]): HomeEvent[] =>
 
     return {
       ...event,
+      accentTheme: event.accentTheme || "blue",
       image: shouldReplaceWithFallbackAsset(event.image) ? fallbackAsset?.image ?? event.image : event.image,
       imageAlt: event.imageAlt || fallbackAsset?.imageAlt || "",
+      sponsors: (event.sponsors ?? []).map((sponsor) => ({
+        ...sponsor,
+      })),
     };
   });
 
@@ -376,6 +380,19 @@ const syncImageBackedContentToStorage = async <K extends SiteContentKey>(
           image: event.image
             ? await syncAssetUrlToSupabase(event.image, "events", event.id || "event-image", cache)
             : event.image,
+          sponsors: await Promise.all(
+            (event.sponsors ?? []).map(async (sponsor) => ({
+              ...sponsor,
+              logo: sponsor.logo
+                ? await syncAssetUrlToSupabase(
+                    sponsor.logo,
+                    "events/sponsors",
+                    sponsor.id || `${event.id}-sponsor`,
+                    cache,
+                  )
+                : sponsor.logo,
+            })),
+          ),
         })),
       )) as SiteContentMap[K];
     case "kits":
