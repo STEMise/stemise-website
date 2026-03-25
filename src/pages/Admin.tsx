@@ -677,8 +677,7 @@ const Admin = () => {
                 />
                 {magicLinkSent ? (
                   <div className="rounded-[1.4rem] border-2 border-foreground bg-[#eef8dc] px-4 py-3 text-sm leading-6 text-foreground">
-                    Magic link sent. Open the email on this device. Your admin session will always
-                    expire after 30 minutes.
+                    Magic link sent. Open the email on this device to unlock admin mode.
                   </div>
                 ) : null}
                 <Button onClick={handleSendMagicLink} disabled={authPending || !email} className="w-full">

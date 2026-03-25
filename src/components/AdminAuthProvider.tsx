@@ -1,13 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
-import { ADMIN_BUILD_ID } from "@/generated/build-meta";
 
-const ADMIN_SESSION_MAX_AGE_MS = 30 * 60 * 1000;
 const ADMIN_SESSION_CHECK_TIMEOUT_MS = 30_000;
-const ADMIN_SESSION_STARTED_AT_KEY = "stemise:admin:started_at";
 const ADMIN_RETURN_TO_KEY = "stemise:admin:return_to";
-const ADMIN_BUILD_ID_KEY = "stemise:admin:build_id";
 
 type AdminAuthContextValue = {
   session: Session | null;
@@ -20,43 +16,6 @@ type AdminAuthContextValue = {
 
 const AdminAuthContext = createContext<AdminAuthContextValue | undefined>(undefined);
 
-const getStoredSessionStartedAt = () => {
-  if (typeof window === "undefined") return null;
-
-  const rawValue = window.localStorage.getItem(ADMIN_SESSION_STARTED_AT_KEY);
-  if (!rawValue) return null;
-
-  const timestamp = Number(rawValue);
-  return Number.isFinite(timestamp) ? timestamp : null;
-};
-
-const storeSessionStartedAt = (timestamp: number) => {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(ADMIN_SESSION_STARTED_AT_KEY, String(timestamp));
-};
-
-const clearSessionStartedAt = () => {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(ADMIN_SESSION_STARTED_AT_KEY);
-};
-
-const getStoredAdminBuildId = () => {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(ADMIN_BUILD_ID_KEY);
-};
-
-const storeAdminBuildId = (buildId: string) => {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(ADMIN_BUILD_ID_KEY, buildId);
-};
-
-const isAdminSessionExpired = () => {
-  const startedAt = getStoredSessionStartedAt();
-  if (!startedAt) return false;
-
-  return Date.now() - startedAt >= ADMIN_SESSION_MAX_AGE_MS;
-};
-
 export const getRememberedAdminReturnPath = () => {
   if (typeof window === "undefined") return "/";
   return window.sessionStorage.getItem(ADMIN_RETURN_TO_KEY) || "/";
@@ -68,8 +27,8 @@ const rememberAdminReturnPath = (path: string) => {
 };
 
 export const clearStoredAdminSessionState = () => {
-  clearSessionStartedAt();
-  storeAdminBuildId(ADMIN_BUILD_ID);
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(ADMIN_RETURN_TO_KEY);
 };
 
 const getTimedOutSessionCheck = () =>
@@ -100,36 +59,13 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
       await supabase.auth.signOut();
     };
 
-    const syncSession = async (nextSession: Session | null, resetStartedAt = false) => {
+    const syncSession = async (nextSession: Session | null) => {
       if (!nextSession) {
-        clearSessionStartedAt();
-        storeAdminBuildId(ADMIN_BUILD_ID);
         if (!cancelled) {
           setSession(null);
           setIsAdmin(false);
           setIsLoading(false);
         }
-        return;
-      }
-
-      if (resetStartedAt) {
-        storeSessionStartedAt(Date.now());
-      } else if (!getStoredSessionStartedAt()) {
-        storeSessionStartedAt(Date.now());
-      }
-
-      const storedBuildId = getStoredAdminBuildId();
-      if (storedBuildId && storedBuildId !== ADMIN_BUILD_ID) {
-        clearSessionStartedAt();
-        storeAdminBuildId(ADMIN_BUILD_ID);
-        await supabase.auth.signOut();
-        return;
-      }
-
-      storeAdminBuildId(ADMIN_BUILD_ID);
-
-      if (isAdminSessionExpired()) {
-        await supabase.auth.signOut();
         return;
       }
 
@@ -180,20 +116,12 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
         clearStoredAdminSessionState();
       }
 
-      await syncSession(nextSession ?? null, event === "SIGNED_IN");
+      await syncSession(nextSession ?? null);
     });
-
-    const intervalId = window.setInterval(async () => {
-      if (!supabase) return;
-      if (isAdminSessionExpired()) {
-        await supabase.auth.signOut();
-      }
-    }, 15_000);
 
     return () => {
       cancelled = true;
       subscription.unsubscribe();
-      window.clearInterval(intervalId);
     };
   }, []);
 
