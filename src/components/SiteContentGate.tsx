@@ -2,14 +2,14 @@ import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { Loader2, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { hasCachedSiteContent, useAllSiteContentQuery } from "@/lib/site-content";
+import { hasWarmSiteContent, useAllSiteContentQuery } from "@/lib/site-content";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 const SiteContentGate = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const cachedContentExists = useMemo(() => hasCachedSiteContent(), []);
+  const warmContentExists = useMemo(() => hasWarmSiteContent(), []);
   const isAdminRoute = location.pathname.startsWith("/admin");
-  const shouldGate = isSupabaseConfigured && !cachedContentExists && !isAdminRoute;
+  const shouldGate = isSupabaseConfigured && !warmContentExists && !isAdminRoute;
   const { isLoading, isFetching, error, refetch } = useAllSiteContentQuery();
 
   if (!shouldGate) {

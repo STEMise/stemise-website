@@ -1,0 +1,45 @@
+name: Publish Site Content
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: publish-site-content
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Trigger redeploy when site JSON changes
+        run: node scripts/check-site-content-redeploy.js
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+
+      - name: Commit updated deploy state
+        run: |
+          if git diff --quiet -- .github/site-content-deploy-state.json; then
+            echo "No deploy state change to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/site-content-deploy-state.json
+          git commit -m "chore: update site content deploy state"
+          git push

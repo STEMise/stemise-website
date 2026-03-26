@@ -19,6 +19,7 @@ import {
   type CurriculumAgeGroupContent,
   type CurriculumPage,
 } from "@/lib/curriculum-content";
+import { SITE_CONTENT_BUILD_SNAPSHOT } from "@/generated/site-content-snapshot";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export type WorkshopItem = {
@@ -97,6 +98,24 @@ const readCachedSiteContent = (): SiteContentMap | null => {
 };
 
 export const hasCachedSiteContent = () => Boolean(readCachedSiteContent());
+
+const hasBuildSiteContentSnapshot = () =>
+  Boolean(
+    SITE_CONTENT_BUILD_SNAPSHOT &&
+      typeof SITE_CONTENT_BUILD_SNAPSHOT === "object",
+  );
+
+const readBuildSiteContentSnapshot = (): SiteContentMap | null => {
+  if (!hasBuildSiteContentSnapshot()) {
+    return null;
+  }
+
+  return normalizeSiteContentState(
+    SITE_CONTENT_BUILD_SNAPSHOT as Partial<Record<SiteContentKey, unknown>>,
+  );
+};
+
+export const hasWarmSiteContent = () => hasBuildSiteContentSnapshot() || hasCachedSiteContent();
 
 const persistCachedSiteContent = (payload: SiteContentMap) => {
   if (typeof window === "undefined") {
@@ -494,6 +513,9 @@ export const emptySiteContent: SiteContentMap = {
   curriculum_pages: [],
 };
 
+const createBaseSiteContentState = () =>
+  cloneValue(isSupabaseConfigured ? emptySiteContent : fallbackSiteContent);
+
 export const siteContentLabels: Record<SiteContentKey, string> = {
   home_events: "Home events",
   impact_metrics: "Impact metrics",
@@ -511,8 +533,13 @@ const getInitialSiteContentState = () => {
     return cloneValue(fallbackSiteContent);
   }
 
+  const buildSnapshot = readBuildSiteContentSnapshot();
+  if (buildSnapshot) {
+    return cloneValue(buildSnapshot);
+  }
+
   const cachedContent = readCachedSiteContent();
-  return cachedContent ? cloneValue(cachedContent) : cloneValue(emptySiteContent);
+  return cachedContent ? cloneValue(cachedContent) : createBaseSiteContentState();
 };
 
 export const getFallbackSiteContent = <K extends SiteContentKey>(key: K): SiteContentMap[K] =>
@@ -532,7 +559,7 @@ export const normalizeSiteContent = <K extends SiteContentKey>(
 const normalizeSiteContentState = (
   payload: Partial<Record<SiteContentKey, unknown>> | null | undefined,
 ): SiteContentMap => {
-  const nextContent = getInitialSiteContentState();
+  const nextContent = createBaseSiteContentState();
 
   if (!payload) {
     return nextContent;
@@ -734,15 +761,21 @@ export const uploadSiteAsset = async (file: File, folder: string): Promise<strin
 
 export const useAllSiteContentQuery = <T = SiteContentMap>(
   select?: (data: SiteContentMap) => T,
+  options: {
+    staleTime?: number;
+    gcTime?: number;
+    refetchOnMount?: boolean | "always";
+    refetchOnWindowFocus?: boolean;
+  } = {},
 ) =>
   useQuery<SiteContentMap, Error, T>({
     queryKey: ["site-content", "all"],
     queryFn: fetchAllSiteContent,
     initialData: getInitialSiteContentState(),
-    staleTime: SITE_CONTENT_STALE_TIME_MS,
-    gcTime: SITE_CONTENT_GC_TIME_MS,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    staleTime: options.staleTime ?? SITE_CONTENT_STALE_TIME_MS,
+    gcTime: options.gcTime ?? SITE_CONTENT_GC_TIME_MS,
+    refetchOnMount: options.refetchOnMount ?? false,
+    refetchOnWindowFocus: options.refetchOnWindowFocus ?? false,
     refetchOnReconnect: true,
     select,
   });

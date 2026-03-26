@@ -311,7 +311,11 @@ type WorldGeoJson = {
 
 const Admin = () => {
   const queryClient = useQueryClient();
-  const { data } = useAllSiteContentQuery();
+  const { data } = useAllSiteContentQuery(undefined, {
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+  });
   const { session, isAdmin, isLoading: authLoading } = useAdminAuth();
   const [content, setContent] = useState<SiteContentMap>(() => cloneValue(data));
   const [authPending, setAuthPending] = useState(false);
@@ -514,39 +518,6 @@ const Admin = () => {
     }
   };
 
-  const triggerRedeployAfterSave = async (scope: string) => {
-    if (!supabase) {
-      throw new Error("Supabase is not configured.");
-    }
-
-    const { data, error, response } = await supabase.functions.invoke("trigger-redeploy", {
-      body: {
-        section: scope,
-      },
-      timeout: 20_000,
-    });
-
-    if (error) {
-      if (response) {
-        try {
-          const errorPayload = await response.clone().json();
-          if (errorPayload?.error) {
-            throw new Error(errorPayload.error as string);
-          }
-        } catch {
-          const errorText = await response.clone().text().catch(() => "");
-          if (errorText) {
-            throw new Error(errorText);
-          }
-        }
-      }
-
-      throw new Error(error.message);
-    }
-
-    return data;
-  };
-
   const handleSaveAll = async () => {
     try {
       setSavingAll(true);
@@ -564,19 +535,10 @@ const Admin = () => {
       });
       setContent(verifiedContent);
 
-      let redeployWarning: string | null = null;
-
-      try {
-        await triggerRedeployAfterSave("all");
-      } catch (error) {
-        redeployWarning = error instanceof Error ? error.message : "Automatic redeploy failed.";
-      }
-
       toast({
         title: "All content saved",
-        description: redeployWarning
-          ? `Everything was saved to Supabase, but automatic redeploy failed: ${redeployWarning}`
-          : "Everything was saved and a fresh redeploy was triggered.",
+        description:
+          "Everything was saved to Supabase. The GitHub publisher will detect this save and trigger the next no-cache redeploy.",
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Save failed.";
